@@ -7,7 +7,7 @@ public class LibraryManager {
 	   
 	  /*
 	   * DatabaseConnector class is used just to separate sensitive 
-	   * information from the rest of the code
+	   * information from the rest of the code, has been ignored
 	   */
       Connection con = DatabaseConnector.connectToDatabase();
       // display status message
