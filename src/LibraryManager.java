@@ -1,5 +1,4 @@
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
@@ -71,7 +70,8 @@ public class LibraryManager {
 		          //if user's choice is an int ensure it corresponds to an option
 		    	  if (choiceNum < 0 || choiceNum > 7) { 
 		    		  //give an error if choice doesn't correspond to an option 
-		    		  System.out.println("ERROR: choise must be a single digit number that corresponds to an option");
+		    		  System.out.println("ERROR: choise must be a single digit number that " 
+		    				  + "corresponds to an option");
 		    		  System.out.print("Choice: ");
 		    	      choice = input.nextLine();
 		    	  } else {
@@ -80,7 +80,8 @@ public class LibraryManager {
 		    	  }
 		      } catch (NumberFormatException e) {
 		    	  //give an error if the choice is not a number
-		    	  System.out.println("ERROR: choice must be a single digit number that corresponds to an option");
+		    	  System.out.println("ERROR: choice must be a single digit number that corresponds to" 
+		    			  + " an option");
 		    	  System.out.print("Choice: ");
 		          choice = input.nextLine();
 		      }
@@ -116,12 +117,12 @@ public class LibraryManager {
 	 * Prints the full list of books from the database.
 	 * @param st
 	 * 		The statement to be used with the database.
-	 * @requires st is a statement connected to the database that holds the book list.
+	 * @requires st is open
 	 * @ensures The full list of books from the database connected to st will be
 	 * printed to the console.
 	 */
 	public static void printFullList(Statement st) throws SQLException {
-		ResultSet rs = st.executeQuery("SELECT * FROM " + tableName); //get result set
+		ResultSet rs = st.executeQuery("SELECT * FROM " + tableName + ";"); //get result set
 		//print the top of the table of results
 		printHeader();
 		//print full table
@@ -185,6 +186,7 @@ public class LibraryManager {
 	 * @param st
 	 * 		The statement object used to execute sql statements.
 	 * @returns true if the book could be added, false otherwise.
+	 * @requires st is open
 	 * @ensures the current book will be added to the database if it
 	 * meets the requirements and has all necessary information.
 	 */
@@ -248,7 +250,7 @@ public class LibraryManager {
 	 * 		The scanner.
 	 * @param st
 	 * 		The statement object used to execute sql statements.
-	 * @requires input is open
+	 * @requires input is open, st is open
 	 * @ensures the current book will be added to the database if it
 	 * meets the requirements and has all necessary information.
 	 */
@@ -271,7 +273,7 @@ public class LibraryManager {
 	 * 		The scanner.
 	 * @param st
 	 * 		The statement object used to execute sql statements.
-	 * @requires input is open
+	 * @requires input is open, st is open
 	 * @ensures each book entry from that file that is properly formatted
 	 * will be added to the database.
 	 */
@@ -304,8 +306,41 @@ public class LibraryManager {
 		} catch (IOException e) {
 			System.out.println("ERROR: File " + fileName + " cannot be found.");
 		}
-		if (!noErrors) { //report if all books were added successfully
+		if (noErrors) { //report if all books were added successfully
 			System.out.println("All books added successfully.");
+		}
+	}
+	
+	/**
+	 * Checks for a specific book in the database and prints its row if it
+	 * exists or states that it does not exist.
+	 * @param input
+	 * 		The scanner.
+	 * @param st
+	 * 		The statement object used to execute sql statements.
+	 * @requires input is open, st is open
+	 * @ensures if the specified book is present its row is printed,
+	 * or if it is not present a message states that.
+	 */
+	public static void checkForEntry(Scanner input, Statement st) {
+		System.out.print("Enter the ISBN of the book to check for: ");
+		String ISBN = input.nextLine();
+		if (ISBN.length() == 13 && isNumber(ISBN)) {
+			try {
+				ResultSet rs = st.executeQuery("SELECT * FROM " + tableName + " WHERE ISBN = '" + ISBN + "';");
+				if (rs.next()) { //print the result if one was returned
+					printHeader(); //print the header for the row
+					printRow(rs.getString("ISBN"), rs.getString("title"), rs.getString("author"), 
+							rs.getString("genre"), rs.getInt("year"));
+				} else { //if no result was returned output that info to the user
+					System.out.println("Book " + ISBN + " is not in the database.");
+				}
+				rs.close(); //close result set
+			} catch (SQLException e) {
+				System.out.println("ERROR: could not check table for book " + ISBN + ".");
+			}
+		} else {
+			System.out.println("ERROR: " + ISBN + " is not a valid ISBN.");
 		}
 	}
 	
@@ -327,7 +362,7 @@ public class LibraryManager {
 		if (ISBN.length() == 13 && isNumber(ISBN)) {
 			try {
 				//delete the entry with the specified ISBN
-				st.executeUpdate("DELETE FROM " + tableName + " WHERE ISBN = '" + ISBN + "'");
+				st.executeUpdate("DELETE FROM " + tableName + " WHERE ISBN = '" + ISBN + "';");
 			} catch (SQLException e) {
 				//error if book could not be deleted
 				System.out.println("ERROR: could not delete entry.");
@@ -335,6 +370,62 @@ public class LibraryManager {
 		} else {
 			//error if ISBN is not entered correctly
 			System.out.println("ERROR: " + ISBN + " is not a valid ISBN.");
+		}
+	}
+	
+	/**
+	 * Method to print a subset of the table chosen by the user.
+	 * @param input
+	 * 		The scanner.
+	 * @param st
+	 * 		The statement object used to execute sql statements.
+	 * @requires input is open
+	 * @ensures a subset of the table which follows a certain restriction
+	 * chosen by the user will be printed.
+	 */
+	public static void printSubset(Scanner input, Statement st) { 
+		//get choice from user
+		System.out.println("You can get a subset of all the books from the database with");
+		System.out.println("the same title, author, or genre.");
+		System.out.print("Enter 1 for title, 2 for author, 3 for genre: ");
+		String choice = input.nextLine();
+		boolean choiceValid = false; //boolean for if the user's choice is valid
+		if (choice.equals("1")) {
+			choiceValid = true;
+			choice = "title";
+		} else if (choice.equals("2")) {
+			choiceValid = true;
+			choice = "author";
+		} else if (choice.equals("3")) {
+			choiceValid = true;
+			choice = "genre";
+		}
+		
+		//check if choice is valid
+		if (choiceValid) {
+		//now get what the user wants to search for
+		System.out.print("Now enter the " + choice + " that you want the entries for (you " + 
+				"will be given a table containing every entry whose " + choice + 
+				" has the answer you enter here): ");
+		String userInput = input.nextLine();
+		
+			try {
+				
+				ResultSet rs = st.executeQuery("SELECT * FROM " + tableName + " WHERE " +
+						choice + " LIKE '%" + userInput + "%';"); //get result set
+				//print the top of the table of results
+				printHeader();
+				//print full table
+				while (rs.next()) {
+					printRow(rs.getString("ISBN"), rs.getString("title"), rs.getString("author"), 
+							rs.getString("genre"), rs.getInt("year"));
+				}
+				rs.close(); //close result set
+			} catch (SQLException e) {
+				System.out.println("ERROR: could not read from table.");
+			}
+		} else { //print error message for invalid choice
+			System.out.println("ERROR: " + choice + " is not a valid option.");
 		}
 	}
 	
@@ -380,13 +471,13 @@ public class LibraryManager {
 		    	  printFullList(st);
 		    	  break;
 		      } case 5: { //allows a check for a specific book in the database
-		    	  
+		    	  checkForEntry(input, st);
 		    	  break;
 		      } case 6: { //allow a user to delete a book
-		    	  
+		    	  deleteEntry(input, st);
 		    	  break;
 		      } case 7: { //allow user to get a subset of the table
-		    	  deleteEntry(input, st);
+		    	  printSubset(input, st);
 		    	  break;
 		      } default: {  
 		    	  break;
