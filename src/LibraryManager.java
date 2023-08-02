@@ -470,16 +470,16 @@ public class LibraryManager {
 		      } case 4: { //4 prints the full list of books from the database
 		    	  printFullList(st);
 		    	  break;
-		      } case 5: { //allows a check for a specific book in the database
+		      } case 5: { //5 allows a check for a specific book in the database
 		    	  checkForEntry(input, st);
 		    	  break;
-		      } case 6: { //allow a user to delete a book
+		      } case 6: { //6 allow a user to delete a book
 		    	  deleteEntry(input, st);
 		    	  break;
-		      } case 7: { //allow user to get a subset of the table
+		      } case 7: { //7 allow user to get a subset of the table
 		    	  printSubset(input, st);
 		    	  break;
-		      } default: {  
+		      } default: { //0 quits the program
 		    	  break;
 		      }
 	      }
