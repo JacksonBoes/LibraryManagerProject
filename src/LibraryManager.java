@@ -6,6 +6,22 @@ import java.util.Scanner;
 
 public class LibraryManager {
 	
+	/**
+	 * Prints the formatting rules for adding entries to the database.
+	 * @ensures the format guidelines will be printed to the console.
+	 */
+	public static void printEntryFormat() {
+		System.out.println("When adding entries to the database they must follow a specific format.");
+		System.out.println("They must be in the form of ISBN/Title/Author/Genre/Year Published.");
+		System.out.println("The ISBN must contain only the digits of the ISBN-13 number for the book");
+		System.out.println("with no hyphens or dashes. The title cannot be longer than one hundred");
+		System.out.println("characters (including spaces). The author cannot be more than fifty");
+		System.out.println("characters (including spaces). The genres can be divided up any way you see");
+		System.out.println("fit just ensure that each book has only one genre which has a name that is");
+		System.out.println("fifteen characters or less. The year must be in yyyy format.");
+		System.out.println("You also may add books by giving the program the name and location of a file,");
+		System.out.println("containing a list of entries in the above format with one entry per line.");
+	}
 	
 	/**
 	 * Method to get the choice from the user for what action they would like to take.
@@ -57,6 +73,29 @@ public class LibraryManager {
 	}
 	
 	/**
+	 * Prints the top of the table of results.
+	 * @ensures The header for each column of the table is printed.
+	 */
+	public static void printHeader() {
+		//printing the top boundary of the table
+		for (int i = 0; i < 137; i++) {
+			System.out.print("-");
+		}
+		System.out.println();
+		//printing each column header
+		System.out.printf("|%-13s", "ISBN");
+		System.out.printf("|%-50s", "Title");
+		System.out.printf("|%-50s", "Author");
+		System.out.printf("|%-15s", "Genre");
+		System.out.println("|Year|");
+		//printing the bottom boundary of the table
+		for (int i = 0; i < 137; i++) {
+			System.out.print("-");
+		}
+		System.out.println();
+	}
+	
+	/**
 	 * Prints the full list of books from the database.
 	 * @param st
 	 * 		The statement to be used with the database.
@@ -66,13 +105,58 @@ public class LibraryManager {
 	 */
 	public static void printFullList(Statement st) throws SQLException {
 		ResultSet rs = st.executeQuery("SELECT * FROM bookEntries"); //get result set
+		//print the top of the table of results
+		printHeader();
 		//print full table
 		while (rs.next()) {
-			System.out.println(rs.getString("ISBN") + ", " + rs.getString("title") + ", " 
-					+ rs.getString("author") + ", " + rs.getString("genre") + ", " + 
-					rs.getInt("year"));
+			printRow(rs.getString("ISBN"), rs.getString("title"), rs.getString("author"), rs.getString("genre"), rs.getInt("year"));
 		}
 		rs.close(); //close result set
+	}
+	
+	/**
+	 * Prints each row of the table of results, formatted correctly.
+	 * @param ISBN
+	 * 		The ISBN number of the given book.
+	 * @param title
+	 * 		The title of the given book.
+	 * @param author
+	 * 		The author of the given book.
+	 * @param genre
+	 * 		The genre of the given book.
+	 * @param year
+	 * 		The publication year of the given book.
+	 * @ensures All of the information from the book entry will be printed in a table row format.
+	 */
+	public static void printRow(String ISBN, String title, String author, String genre, int year) {
+		int titleLength = title.length(); //get length of title
+		//print out all the rows formatted for the table
+		System.out.print("|" + ISBN + "|");
+		//if the title is longer than 50 characters then print just the first 50
+		if (titleLength <= 50) {
+			System.out.printf("%-50s", title);
+		} else {
+			System.out.print(title.substring(0, 50));
+		}
+		System.out.printf("|%-50s|", author);
+		System.out.printf("%-15s|", genre);
+		System.out.println(year + "|");
+		/*
+		 * if the title is longer than 50 characters print another row across the table to 
+		 * add the rest of the title
+		 */
+		if (titleLength > 50) {
+			System.out.printf("|%-13s|", "");
+			System.out.printf("%-50s", title.substring(50));
+			System.out.printf("|%-50s|", "");
+			System.out.printf("%-15s|", "");
+			System.out.println("    |");
+		}
+		//print the bottom boundary of the row
+		for (int i = 0; i < 137; i++) {
+			System.out.print("-");
+		}
+		System.out.println();
 	}
 	
     public static void main(String[] args) throws Exception {
@@ -103,16 +187,26 @@ public class LibraryManager {
       while (choice != 0) {
 	      //get the choice for the course of action from the user
 	      choice = getChoice(input);
-	      if (choice == 1) {
-	    	  
-	      } else if (choice == 2) {
-	    	  
-	      } else if (choice == 3) {
-	    	  
-	      } else if (choice == 4) {
-	    	  printFullList(st);
-	      } else if (choice == 5) {
-	    	  
+	      switch (choice) {
+		      case 1: { //1 gets the user the formatting rules for adding entries
+		    	  printEntryFormat();
+		    	  break;
+		      } case 2: { //2 adds a single book entry manually
+		    	  
+		    	  break;
+		      } case 3: { //3 takes a filename of a file full of book entries
+		    	  
+		    	  break;
+		      } case 4: { //4 prints the full list of books from the database
+		    	  printFullList(st);
+		    	  break;
+		      } case 5: { //allows a check for a specific book in the database
+		    	  
+		    	  break;
+		      } default: {
+		    	  
+		    	  break;
+		      }
 	      }
 	      System.out.println(); //add new line
       }
