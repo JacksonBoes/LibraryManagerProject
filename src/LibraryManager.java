@@ -3,7 +3,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Scanner;
-
+/**
+ * A program to help a user manage a database of library books.
+ * @author Jackson Boes
+ *
+ */
 public class LibraryManager {
 	
 	/**
