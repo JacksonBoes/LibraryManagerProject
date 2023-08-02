@@ -1,7 +1,13 @@
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
 /**
  * A program to help a user manage a database of library books.
@@ -9,6 +15,11 @@ import java.util.Scanner;
  *
  */
 public class LibraryManager {
+	
+	/**
+	 * The name of the database being used.
+	 */
+	private static String tableName = "bookEntries";
 	
 	/**
 	 * Prints the formatting rules for adding entries to the database.
@@ -33,7 +44,7 @@ public class LibraryManager {
 	 * @param input
 	 * 		The input scanner.
 	 * @requires input is open
-	 * @ensures 0 <= getChoice <= 5
+	 * @ensures 0 <= getChoice <= 7
 	 * @return An int that corresponds to the user's choice.
 	 */
 	public static int getChoice(Scanner input) {
@@ -46,6 +57,8 @@ public class LibraryManager {
 	    		  + "be added");
 	      System.out.println("4: get a full list of books from the database");
 	      System.out.println("5: check for a single book's presence in the database");
+	      System.out.println("6: delete a book from the database");
+	      System.out.println("7: get a specific list of books from the database");
 	      System.out.print("Choice: ");
 	      String choice = input.nextLine();
 	      int choiceNum = -1; //initialize choiceNum with an arbitrary initial value
@@ -56,9 +69,9 @@ public class LibraryManager {
 		      try {
 		    	  choiceNum = Integer.parseInt(choice); //try to parse user's choice into an int
 		          //if user's choice is an int ensure it corresponds to an option
-		    	  if (choiceNum < 0 || choiceNum > 5) { 
+		    	  if (choiceNum < 0 || choiceNum > 7) { 
 		    		  //give an error if choice doesn't correspond to an option 
-		    		  System.out.println("Error: choise must be a single digit number that corresponds to an option");
+		    		  System.out.println("ERROR: choise must be a single digit number that corresponds to an option");
 		    		  System.out.print("Choice: ");
 		    	      choice = input.nextLine();
 		    	  } else {
@@ -67,7 +80,7 @@ public class LibraryManager {
 		    	  }
 		      } catch (NumberFormatException e) {
 		    	  //give an error if the choice is not a number
-		    	  System.out.println("Error: choice must be a single digit number that corresponds to an option");
+		    	  System.out.println("ERROR: choice must be a single digit number that corresponds to an option");
 		    	  System.out.print("Choice: ");
 		          choice = input.nextLine();
 		      }
@@ -108,12 +121,13 @@ public class LibraryManager {
 	 * printed to the console.
 	 */
 	public static void printFullList(Statement st) throws SQLException {
-		ResultSet rs = st.executeQuery("SELECT * FROM bookEntries"); //get result set
+		ResultSet rs = st.executeQuery("SELECT * FROM " + tableName); //get result set
 		//print the top of the table of results
 		printHeader();
 		//print full table
 		while (rs.next()) {
-			printRow(rs.getString("ISBN"), rs.getString("title"), rs.getString("author"), rs.getString("genre"), rs.getInt("year"));
+			printRow(rs.getString("ISBN"), rs.getString("title"), rs.getString("author"), 
+					rs.getString("genre"), rs.getInt("year"));
 		}
 		rs.close(); //close result set
 	}
@@ -163,6 +177,167 @@ public class LibraryManager {
 		System.out.println();
 	}
 	
+	/**
+	 * Adds a single book entry to the database.
+	 * @param userInput
+	 * 		A string of input from the user which should contain
+	 * 		all the info for a new book entry.
+	 * @param st
+	 * 		The statement object used to execute sql statements.
+	 * @returns true if the book could be added, false otherwise.
+	 * @ensures the current book will be added to the database if it
+	 * meets the requirements and has all necessary information.
+	 */
+	public static boolean addEntry(String userInput, Statement st) {
+		userInput = userInput.trim(); //take leading or trailing spaces off of the input
+		//get the input into a list split at /
+		List<String> bookInfo = Arrays.asList(userInput.split("/"));
+		int size = bookInfo.size();
+		boolean added = true; //added will track whether the new entry was added
+		if (size == 5) { //if bookInfo doesn't have 5 entries then the book cannot be added
+			String sql = "INSERT INTO " + tableName + "(ISBN, title, author, genre, year) VALUES(";
+			String ISBN = bookInfo.get(0);
+			//ensure that ISBN is correct since it is the primary key of the table
+			if (ISBN.length() == 13 && isNumber(ISBN)) {
+				//try to execute the statement to add the book
+				try {
+					sql += "'" + ISBN;
+					for (int i = 1; i < size; i++) { //add all the data fields to the statement
+						sql += "', '" + bookInfo.get(i).replace("'", "\\'");
+						//replace any ' in any data fields with \'
+					}
+					sql += "');";
+					st.executeUpdate(sql);
+				} catch (SQLException e) {
+					added = false; //if execute statement fails
+				}
+			} else {
+				added = false; //if ISBN was not correct
+			}
+		} else {
+			added = false; //if size was not 5
+		}
+		return added;
+	}
+	
+    /**
+     * Method to determine whether the given string {@code str} is a 
+     * number.
+     * @param str
+     *            The string to check
+     * @return true if str is a number, false otherwise
+     * @ensures isNumber = [true if str is a number and false
+     *          otherwise]
+     */
+    public static boolean isNumber(String str) {
+        boolean isNumber = true;
+        for (int i = 0; i < str.length(); i++) {
+            if (!Character.isDigit(str.charAt(i))) {
+                isNumber = false;
+            }
+        }
+        if (str.length() == 0) {
+            isNumber = false;
+        }
+        return isNumber;
+    }
+	
+	/**
+	 * Adds a single manual entry from the user.
+	 * @param input
+	 * 		The scanner.
+	 * @param st
+	 * 		The statement object used to execute sql statements.
+	 * @requires input is open
+	 * @ensures the current book will be added to the database if it
+	 * meets the requirements and has all necessary information.
+	 */
+	public static void addManualEntry(Scanner input, Statement st) {
+		System.out.println("Enter the information for the book according to the formatting "
+  			  + "guidelines: ");
+  	  	String userInput = input.nextLine(); //get entry from the user
+		//attempt to add the entry to the database, print error if unsuccessful
+		if (!addEntry(userInput, st)) {
+			System.out.println("ERROR: Book " + userInput + " could not be added,");
+			System.out.println("check that you have followed the formatting guidelines.");
+		} else {
+			System.out.println("Book added successfully.");
+		}
+	}
+	
+	/**
+	 * Reads a file and adds each book entry from the file.
+	 * @param input
+	 * 		The scanner.
+	 * @param st
+	 * 		The statement object used to execute sql statements.
+	 * @requires input is open
+	 * @ensures each book entry from that file that is properly formatted
+	 * will be added to the database.
+	 */
+	public static void addFileOfEntries(Scanner input, Statement st) {
+		System.out.print("Enter the location of the file: ");
+		String fileName = input.nextLine(); //get file name from user
+		boolean noErrors = true; //boolean for whether any errors occured while adding books
+		try {
+			//open buffered reader
+			BufferedReader fileIn = new BufferedReader(new FileReader(fileName));
+			try {
+				//read each line from the file and attempt to add each book to database
+				String line = fileIn.readLine();
+				while (line != null) {
+					if (!addEntry(line, st)) { //if book could not be added report error
+						noErrors = false;
+						System.out.println("ERROR: could not add book: " + line);
+						System.out.println("Any other books were still added successfully.");
+					}
+					line = fileIn.readLine();
+				}
+			} catch (IOException f) {
+				System.out.println("ERROR: could not read from the file.");
+			}
+			try {
+				fileIn.close(); //close buffered reader
+			} catch (IOException k) {
+				System.out.println("File error.");
+			}
+		} catch (IOException e) {
+			System.out.println("ERROR: File " + fileName + " cannot be found.");
+		}
+		if (!noErrors) { //report if all books were added successfully
+			System.out.println("All books added successfully.");
+		}
+	}
+	
+	/**
+	 * Deletes a single entry from the database based on ISBN.
+	 * @param input
+	 * 		The scanner.
+	 * @param st
+	 * 		The statement object used to execute sql statements.
+	 * @requires input is open
+	 * @ensures The book matching the given ISBN will be deleted or 
+	 * if no such book exists an error will be reported.
+	 */
+	public static void deleteEntry(Scanner input, Statement st) {
+		//get the ISBN from the user
+		System.out.print("Enter an ISBN number for the book you wish to delete: ");
+		String ISBN = input.nextLine();
+		//ensure that the ISBN is a proper ISBN number
+		if (ISBN.length() == 13 && isNumber(ISBN)) {
+			try {
+				//delete the entry with the specified ISBN
+				st.executeUpdate("DELETE FROM " + tableName + " WHERE ISBN = '" + ISBN + "'");
+			} catch (SQLException e) {
+				//error if book could not be deleted
+				System.out.println("ERROR: could not delete entry.");
+			}
+		} else {
+			//error if ISBN is not entered correctly
+			System.out.println("ERROR: " + ISBN + " is not a valid ISBN.");
+		}
+	}
+	
     public static void main(String[] args) throws Exception {
 	  /*
 	   * DatabaseConnector class is used just to separate sensitive 
@@ -196,10 +371,10 @@ public class LibraryManager {
 		    	  printEntryFormat();
 		    	  break;
 		      } case 2: { //2 adds a single book entry manually
-		    	  
+		    	  addManualEntry(input, st);
 		    	  break;
 		      } case 3: { //3 takes a filename of a file full of book entries
-		    	  
+		    	  addFileOfEntries(input, st);
 		    	  break;
 		      } case 4: { //4 prints the full list of books from the database
 		    	  printFullList(st);
@@ -207,8 +382,13 @@ public class LibraryManager {
 		      } case 5: { //allows a check for a specific book in the database
 		    	  
 		    	  break;
-		      } default: {
+		      } case 6: { //allow a user to delete a book
 		    	  
+		    	  break;
+		      } case 7: { //allow user to get a subset of the table
+		    	  deleteEntry(input, st);
+		    	  break;
+		      } default: {  
 		    	  break;
 		      }
 	      }

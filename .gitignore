@@ -1,6 +1,9 @@
 # Ignore file that contains personal information about my database
 /src/DatabaseConnector.java
 
+# Ignore file used for testing
+Books.txt
+
 # Eclipse gitignore
 .metadata
 tmp/
